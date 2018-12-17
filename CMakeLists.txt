@@ -22,8 +22,11 @@ endif ()
 set(BUILD_TESTING OFF CACHE INTERNAL "dont build tests!")
 set(BUILD_STATIC_LIBS OFF CACHE INTERNAL "dont compile library static lib.")
 
-add_subdirectory(rtaudio)# EXCLUDE_FROM_ALL)
+add_subdirectory(rtaudio EXCLUDE_FROM_ALL)
 set_target_properties(rtaudio PROPERTIES PREFIX "")
+
+add_custom_target(rtaudio_ffi ALL)
+add_dependencies(rtaudio_ffi rtaudio)
 
 install(TARGETS rtaudio
               RUNTIME DESTINATION  ${LUAJIT_BIN}

@@ -95,7 +95,7 @@ local function AudioInit(audioplayer,audioplayercdef,postfunc,postdata,postcode)
             else break end
         end
         postfuncS(streamf,lenf,streamTime)
-        if audioplayer.recordfile.sf~= nil then
+        if audioplayer.recordfile~= nil then
 			audioplayer.recordfile[writefunc](audioplayer.recordfile,streamf,lenf)
 		end
         --audioplayer.streamTime = streamTime + lenf*timefac
@@ -108,7 +108,7 @@ local audioplayercdef = [[
 typedef struct sf_node sf_node;
 struct sf_node
 {
-    SNDFILE_ref sf;
+    SNDFILE_ref *sf;
     double level;
     double timeoffset;
     sf_node *next;
@@ -118,7 +118,7 @@ typedef struct rt_audioplayer
 {
     rtaudio_stream_parameters_t outpar[1];
     sf_node root;
-    SNDFILE_ref recordfile;
+    SNDFILE_ref *recordfile;
     rtaudio_t dac;
 	rtaudio_format_t format;
 	unsigned int bufferFrames[1];
@@ -158,7 +158,7 @@ function AudioPlayer_mt:close()
     for node in self:nodes() do
         node.sf:close()
     end
-    if self.recordfile.sf ~=nil then
+    if self.recordfile ~=nil then
 		self.recordfile:close()
 	end
     rt.close_stream(self.dac)
@@ -219,7 +219,7 @@ function AudioPlayer_mt:insert(filename,level,timeoffset)
 end
 local recordfile_anchor
 function AudioPlayer_mt:record(filename,format)
-	assert(self.recordfile.sf==nil,"AudioPlayer already has recording file.")
+	assert(self.recordfile==nil,"AudioPlayer already has recording file.")
 	local sf = sndf.Sndfile(filename,"w",self.sample_rate,self.outpar[0].num_channels,format)
 	recordfile_anchor = sf
 	self.recordfile = sf

@@ -6,7 +6,10 @@ local sndf = require"sndfile_ffi"
 
 local rt = require 'rtaudio_ffi'
 local AudioPlayer = require"rtAudioPlayer"
-
+--to show pointer values
+ffi.cdef[[int snprintf ( char * s, size_t n, const char * format, ... );
+int sprintf ( char * str, const char * format, ... );
+]]
 --------------------------will run in audio thread after playing files
 local delaycdef = [[typedef struct delay{double feedback[1];double delay[1];double maxdelay;} delay]]
 ffi.cdef(delaycdef)
@@ -64,7 +67,7 @@ local audioplayer,err = AudioPlayer({
 	dac = dac,
     device = rt.get_default_output_device(dac),
     freq = info.samplerate, 
-    format = rt.FORMAT_FLOAT64,
+    format = rt.FORMAT_FLOAT32,
     channels = info.channels, 
     samples = 1024},
     delayfunc,fxdata,delaycdef)
@@ -80,21 +83,16 @@ print("---------------opened device",device)
 
 --insert 3 files
 --level 0.1, timeoffset 0
-if not audioplayer:insert(filename,0.2,0) then error"failed insert" end
---will not load, diferent samplerate and channels
---local node2 = audioplayer:insert("arugh.wav",0.1,0.75)
-assert(not node2)
-audioplayer:insert(filename,0.2,1.5)
+if not audioplayer:insert(filename,1,0) then error"failed insert" end
+--will not load, diferent channels
+local node2 = audioplayer:insert("arughSt.wav",0.1,0.75)
+--assert(not node2)
+audioplayer:insert(filename,0.7,1.5)
 
 for node in audioplayer:nodes() do
     print("node",node.sf)
 end
 
---audioplayer:erase(node2)
-print"after erase"
-for node in audioplayer:nodes() do
-    print("node",node.sf)
-end
 
 --audioplayer:record("recording.wav",sndf.SF_FORMAT_WAV+sndf.SF_FORMAT_FLOAT)
 print("audioplayer.recordfile",audioplayer.recordfile)
@@ -167,15 +165,43 @@ while (not done) do
         end
     end
 
-    if ig.Button("insert_node") then
-        audioplayer:insert(filename,0.2,streamtime[0])
+    if ig.Button("insert") then
+        audioplayer:insert(filename,1,streamtime[0])
     end
-	
+	ig.SameLine()
+    if ig.Button("insert arugh") then
+        audioplayer:insert("arughSt.wav",0.5,streamtime[0])
+    end
 	if audioplayer.recordfile~=nil then
 	if ig.Button("close record") then
         audioplayer.recordfile:close()
     end
 	end
+---[[
+
+	local format = string.format
+	local cbuf = ffi.new"char[201]"
+	local level = ffi.new("float[1]")
+	ig.PushItemWidth(80)
+    for node in audioplayer:nodes() do
+		ig.PushIDPtr(node)
+		ffi.C.sprintf(cbuf,"%p",node)
+		ig.Text(cbuf);ig.SameLine()
+		level[0] = node.level
+		if ig.SliderFloat("level",level,0,1) then
+			node.level = level[0]
+		end
+		ig.SameLine();ig.Text(format("time:%4.2f",node.timeoffset))
+		ig.SameLine();ig.Text(format("srate:%4.0f",node.sf:samplerate()));ig.SameLine();
+
+		if ig.SmallButton("delete") then
+			audioplayer:erase(node)
+		end
+		ig.PopID()
+    end
+	ig.PopItemWidth()
+
+--]]
     -- end audio gui
     ig_Impl:Render()
     sdl.gL_SwapWindow(window);

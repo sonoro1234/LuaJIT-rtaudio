@@ -106,8 +106,8 @@ M.rtaudio = ffi.metatype("rtaudio_type",rtaudio_t)
 
 ]]
 
-require"anima.utils"
-prtable(parser.defsT)
+--require"anima.utils"
+--prtable(parser.defsT)
 --output sdl2_ffi
 local sdlstr = [[
 local ffi = require"ffi"
@@ -147,7 +147,7 @@ function M.MakeAudioCallback(func, ...)
 	end
 	local cb = callback_t(func, ...)
 	table.insert(callbacks_anchor,cb)
-	return cb:funcptr()
+	return cb:funcptr() , cb
 end
 
 

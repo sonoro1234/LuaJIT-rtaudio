@@ -194,7 +194,7 @@ end
 function rtaudio_t:close_stream()
     return lib.rtaudio_close_stream(self)
 end
-ffi.cdef"typedef struct rtaudio_t rtaudio_type"
+ffi.cdef"typedef struct rtaudio rtaudio_type"
 M.rtaudio = ffi.metatype("rtaudio_type",rtaudio_t)
 
 
@@ -207,7 +207,7 @@ function M.MakeAudioCallback(func, ...)
 	end
 	local cb = callback_t(func, ...)
 	table.insert(callbacks_anchor,cb)
-	return cb:funcptr()
+	return cb:funcptr() , cb
 end
 
 

@@ -240,6 +240,8 @@ local function typetoStr(typ)
     return typ
 end
 local function parseFunction(self,stname,lineorig,namespace)
+	if stname:match"ImVector" then error"Imvector" end
+	print(stname)
 	line = clean_spaces(lineorig)
 	--move *
 	line = line:gsub("%s*%*","%*")
@@ -662,7 +664,7 @@ function M.Parser()
 				local stname = it.item:match("struct%s+(%S+)")
 				local nspparr,itemsnsp = parseItems(nsp)
 				for insp,itnsp in ipairs(nspparr) do
-					if itnsp.re_name == "function_re" or itnsp.re_name == "functionD_re" then
+					if (itnsp.re_name == "function_re" or itnsp.re_name == "functionD_re") then
 						self:parseFunction(stname,itnsp.item)
 					elseif itnsp.re_name == "struct_re" then
 						--get embeded_structs
@@ -785,6 +787,9 @@ function M.Parser()
 			local typen,rest = line:match("%s*([^,]+)%s(%S+[,;])")
 			--local template_type = typen:match("/%*<(.+)>%*/")
 			--if template_type then typen = typen:match("(.+)/%*") end
+                if not typen then -- Lets try Type*name
+                    typen,rest = line:match("([^,]+%*)(%S+[,;])")
+                end
 			local template_type 
 			for k,v in pairs(self.templates) do
 				template_type = typen:match(k.."_(.+)")

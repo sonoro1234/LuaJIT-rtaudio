@@ -59,26 +59,37 @@ if (sdl.Init(sdl.INIT_VIDEO + sdl.INIT_EVENTS) < 0) then
 end
 
 local apis = rt.compiled_api()
-local dac = rt.create(apis[0])--rt.API_WINDOWS_WASAPI)
-print("using",ffi.string(rt.api_name(apis[0])))
+local api = apis[0]
+local api = rt.API_WINDOWS_WASAPI
+local dac = rt.create(api)
+local device = rt.get_default_output_device(dac)
+print("using",ffi.string(rt.api_name(api)))
 --copy specs from file
 local info = sndf.get_info(filename)
 local audioplayer,err = AudioPlayer({
-	dac = dac,
-    device = rt.get_default_output_device(dac),
+    dac = dac,
+    device = device,
     freq = info.samplerate, 
     format = rt.FORMAT_FLOAT32,
     channels = info.channels, 
     samples = 1024},
     delayfunc,fxdata,delaycdef)
 
-if not audioplayer then print(err) end
+if not audioplayer then print(err);error"not audioplayer" end
 
-print"--------------wanted"
---audioplayer.wanted_spec[0]:print()
+
 print("---------------opened device",device)
---audioplayer.obtained_spec[0]:print()
-
+local info = rt.get_device_info(dac,device)
+        print("\tprobed",info.probed>0)
+        print("\tname",ffi.string(info.name))
+        print("\toutput_channels",info.output_channels)
+        print("\tinput_channels",info.input_channels)
+        print("\tduplex_channels",info.duplex_channels)
+        print("\tpreferred_sample_rate",info.preferred_sample_rate)
+        print("\tis_default_output",info.is_default_output>0)
+        print("\tis_default_input",info.is_default_input>0)
+        print("\tnative_formats",info.native_formats)
+print("---------------")
 ----------------------------------------------------
 
 --insert 3 files

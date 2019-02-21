@@ -1,6 +1,7 @@
 local ffi = require"ffi"
 local rt = require"rtaudio_ffi"
 local sndf = require"sndfile_ffi"
+local Mutex = require "lj-async.mutex"
 
 
 --------------will run in a same thread and different lua state and return the callback
@@ -8,6 +9,7 @@ local function AudioInit(audioplayer,audioplayercdef,postfunc,postdata,postcode)
     local ffi = require"ffi"
     local rt = require"rtaudio_ffi"
     local sndf = require"sndfile_ffi"
+	local Mutex = require "lj-async.mutex"
     local function audio_buffer_type(ap)
         local typebuffer
         if ap.format == rt.FORMAT_SINT16 then
@@ -64,7 +66,7 @@ local function AudioInit(audioplayer,audioplayercdef,postfunc,postdata,postcode)
     -- this is the real callback
     return function(out, inp, nFrames,stream_time,status,userdata)
         --print(out, inp, nFrames,stream_time,status,userdata)
-        
+        audioplayer.mutex:lock()
         local streamTime = stream_time
         local lenf = nFrames
         local windowsize = lenf * timefac
@@ -103,6 +105,7 @@ local function AudioInit(audioplayer,audioplayercdef,postfunc,postdata,postcode)
             audioplayer.recordfile[writefunc](audioplayer.recordfile,streamf,lenf)
         end
         --audioplayer.streamTime = streamTime + lenf*timefac
+		audioplayer.mutex:unlock()
         return 0
     end
 end
@@ -128,6 +131,7 @@ typedef struct rt_audioplayer
     unsigned int bufferFrames[1];
     unsigned int sample_rate;
     src_callback_t resampler_input_cb;
+	mutextype *mutex;
 } rt_audioplayer;
 ]]
 
@@ -135,6 +139,7 @@ ffi.cdef(audioplayercdef)
 
 local AudioPlayer_mt = {}
 AudioPlayer_mt.__index = AudioPlayer_mt
+local mutex_anchor = {}
 function AudioPlayer_mt:__new(t,postfunc,postdata,postcode)
     local postfunc = postfunc or function() return function() end end
     local ap = ffi.new("rt_audioplayer")
@@ -146,6 +151,9 @@ function AudioPlayer_mt:__new(t,postfunc,postdata,postcode)
     ap.outpar[0].device_id = t.device
     ap.outpar[0].num_channels = t.channels
     ap.format = t.format
+	local mutex_ = Mutex()
+	ap.mutex = mutex_
+	table.insert(mutex_anchor, mutex_)
     --print("--------------------------format",ap.format ,t.format)
     local options
     local thecallback, cbmaker = rt.MakeAudioCallback(AudioInit,ap,audioplayercdef,postfunc,postdata,postcode)
@@ -170,14 +178,28 @@ function AudioPlayer_mt:close()
         self.recordfile:close()
     end
     rt.close_stream(self.dac)
+	local found
+	for i,v in ipairs(mutex_anchor) do
+		if v == self.mutex then
+			table.remove(mutex_anchor, i)
+			found = true
+			break
+		end
+	end
+	assert(found)
+	print("found is", found)
     ffi.gc(self,nil)
 end
 function AudioPlayer_mt:get_stream_time()
-    return rt.get_stream_time(self.dac)
+	self:lock()
+    local tim = rt.get_stream_time(self.dac)
+	self:unlock()
+	return tim
 end
 function AudioPlayer_mt:set_stream_time(time)
     rt.set_stream_time(self.dac,time)
 
+    self:lock()
     local sf_node = self.root
     while true do
         sf_node = sf_node.next[0]
@@ -192,13 +214,13 @@ function AudioPlayer_mt:set_stream_time(time)
             --if res==-1 then print("bad seeking in ",sf_node.sf) end
         end
     end
-
+    self:unlock()
 end
 function AudioPlayer_mt:lock()
-    --sdl.LockAudioDevice(self.device)
+    self.mutex:lock()
 end
 function AudioPlayer_mt:unlock()
-    --sdl.UnlockAudioDevice(self.device)
+    self.mutex:unlock()
 end
 function AudioPlayer_mt:start()
     rt.start_stream(self.dac)

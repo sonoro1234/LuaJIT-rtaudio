@@ -1,4 +1,5 @@
 [submodule "rtaudio"]
 	path = rtaudio
-	url = https://github.com/thestk/rtaudio
+	url = https://github.com/sonoro1234/rtaudio
+	branch = cmake_unistall
 

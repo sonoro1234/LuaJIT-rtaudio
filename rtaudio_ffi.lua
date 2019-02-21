@@ -2,9 +2,8 @@ local ffi = require"ffi"
 
 --uncomment to debug cdef calls
 ---[[
-local ffi_cdef = ffi.cdef
-ffi.cdef = function(code)
-    local ret,err = pcall(ffi_cdef,code)
+local ffi_cdef = function(code)
+    local ret,err = pcall(ffi.cdef,code)
     if not ret then
         local lineN = 1
         for line in code:gmatch("([^\n\r]*)\r?\n") do
@@ -16,7 +15,7 @@ ffi.cdef = function(code)
     end
 end
 --]]
-ffi.cdef[[
+ffi_cdef[[
 typedef unsigned long rtaudio_format_t;
 typedef unsigned int rtaudio_stream_flags_t;
 typedef unsigned int rtaudio_stream_status_t;
@@ -107,7 +106,7 @@ rtaudio_open_stream(rtaudio_t audio, rtaudio_stream_parameters_t *output_params,
  int rtaudio_get_stream_latency(rtaudio_t audio);
  unsigned int rtaudio_get_stream_sample_rate(rtaudio_t audio);
  void rtaudio_show_warnings(rtaudio_t audio, int show);]]
-ffi.cdef[[static const int RTAUDIO_FORMAT_SINT8 = 0x01;
+ffi_cdef[[static const int RTAUDIO_FORMAT_SINT8 = 0x01;
 static const int RTAUDIO_FORMAT_SINT16 = 0x02;
 static const int RTAUDIO_FORMAT_SINT24 = 0x04;
 static const int RTAUDIO_FORMAT_SINT32 = 0x08;

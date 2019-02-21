@@ -115,9 +115,8 @@ local ffi = require"ffi"
 --uncomment to debug cdef calls]]..
 "\n---[["..[[
 
-local ffi_cdef = ffi.cdef
-ffi.cdef = function(code)
-    local ret,err = pcall(ffi_cdef,code)
+local ffi_cdef = function(code)
+    local ret,err = pcall(ffi.cdef,code)
     if not ret then
         local lineN = 1
         for line in code:gmatch("([^\n\r]*)\r?\n") do
@@ -130,9 +129,9 @@ ffi.cdef = function(code)
 end
 ]].."--]]"..[[
 
-ffi.cdef]].."[["..table.concat(cdefs,"").."]]"..[[
+ffi_cdef]].."[["..table.concat(cdefs,"").."]]"..[[
 
-ffi.cdef]].."[["..table.concat(deftab,"\n").."]]"..[[
+ffi_cdef]].."[["..table.concat(deftab,"\n").."]]"..[[
 
 local lib = ffi.load"rtaudio"
 

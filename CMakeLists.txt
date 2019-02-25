@@ -19,8 +19,8 @@ if (UNIX AND NOT APPLE)
 	set(RTAUDIO_API_JACK ON CACHE INTERNAL "AUDIO_UNIX_JACK!")
 endif ()
 
-set(BUILD_TESTING OFF CACHE INTERNAL "dont build tests!")
-set(BUILD_STATIC_LIBS OFF CACHE INTERNAL "dont compile library static lib.")
+set(RTAUDIO_BUILD_TESTING OFF CACHE INTERNAL "dont build tests!")
+set(RTAUDIO_BUILD_STATIC_LIBS OFF CACHE INTERNAL "dont compile library static lib.")
 
 add_subdirectory(rtaudio EXCLUDE_FROM_ALL)
 set_target_properties(rtaudio PROPERTIES PREFIX "")

@@ -1,6 +1,8 @@
 PROJECT(rtaudio_ffi)
 cmake_minimum_required(VERSION 3.13)
-#set(CMAKE_SHARED_LIBRARY_PREFIX "")
+if(WIN32) #to mingw work as all the others
+set(CMAKE_SHARED_LIBRARY_PREFIX "")
+endif(WIN32)
 #first take care of RtAudio CMake
 if (WIN32)
 	set(RTAUDIO_API_DS ON CACHE INTERNAL "use windows ds!")

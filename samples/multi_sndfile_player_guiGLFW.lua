@@ -1,5 +1,5 @@
 
-local sdl = require 'sdl2_ffi'
+
 local ffi = require 'ffi'
 --https://github.com/sonoro1234/LuaJIT-libsndfile
 local sndf = require"sndfile_ffi"
@@ -46,21 +46,15 @@ end
 ------------------------------------------------------------------------
 -----------------------main--------------------------------------
 
-local ig = require"imgui.sdl"
 
 local filename = "african_roomS.wav";
 --local filename = "arugh.wav" --"sample.wav";
 
-    --/* Enable standard application logging */
-sdl.LogSetPriority(sdl.LOG_CATEGORY_APPLICATION, sdl.LOG_PRIORITY_INFO);
-if (sdl.Init(sdl.INIT_VIDEO + sdl.INIT_EVENTS) < 0) then
-    sdl.LogError(sdl.LOG_CATEGORY_APPLICATION, "Couldn't initialize SDL: %s\n", sdl.GetError());
-    return (1);
-end
+
 
 local apis = rt.compiled_api()
 local api = apis[0]
-local api = rt.API_WINDOWS_WASAPI
+--local api = rt.API_WINDOWS_WASAPI
 local dac = rt.create(api)
 local device = rt.get_default_output_device(dac)
 print("using",ffi.string(rt.api_name(api)))
@@ -111,45 +105,43 @@ print("audioplayer.recordfile",audioplayer.recordfile)
 print"--------------------------------------"
 --------------------------------------------------
 
-sdl.gL_SetAttribute(sdl.GL_CONTEXT_FLAGS, sdl.GL_CONTEXT_FORWARD_COMPATIBLE_FLAG);
-sdl.gL_SetAttribute(sdl.GL_CONTEXT_PROFILE_MASK, sdl.GL_CONTEXT_PROFILE_CORE);
-sdl.gL_SetAttribute(sdl.GL_DOUBLEBUFFER, 1);
-sdl.gL_SetAttribute(sdl.GL_DEPTH_SIZE, 24);
-sdl.gL_SetAttribute(sdl.GL_STENCIL_SIZE, 8);
-sdl.gL_SetAttribute(sdl.GL_CONTEXT_MAJOR_VERSION, 3);
-sdl.gL_SetAttribute(sdl.GL_CONTEXT_MINOR_VERSION, 2);
+local lj_glfw = require"glfw"
+local gllib = require"gl"
+gllib.set_loader(lj_glfw)
+local gl, glc, glu, glext = gllib.libraries()
+local ig = require"imgui.glfw"
 
-local window = sdl.createWindow("ImGui SDL2+OpenGL3 example", sdl.WINDOWPOS_CENTERED, sdl.WINDOWPOS_CENTERED, 700, 500, sdl.WINDOW_OPENGL+sdl.WINDOW_RESIZABLE);
+lj_glfw.setErrorCallback(function(error,description)
+    print("GLFW error:",error,ffi.string(description or ""));
+end)
 
-local gl_context = sdl.gL_CreateContext(window);
-sdl.gL_SetSwapInterval(1); -- Enable vsync
+lj_glfw.init()
+local window = lj_glfw.Window(700,500)
+window:makeContextCurrent() 
 
-local ig_Impl = ig.Imgui_Impl_SDL_opengl3()
-
-ig_Impl:Init(window, gl_context)
+--choose implementation
+--local ig_impl = ig.ImplGlfwGL3() --multicontext
+--local ig_impl = ig.Imgui_Impl_glfw_opengl3() --standard imgui opengl3 example
+local ig_impl = ig.Imgui_Impl_glfw_opengl2() --standard imgui opengl2 example
 
 local igio = ig.GetIO()
+igio.ConfigFlags = ig.lib.ImGuiConfigFlags_NavEnableKeyboard + igio.ConfigFlags
 
-local done = false;
+
+ig_impl:Init(window, true)
+
+
 local streamtime = ffi.new("float[1]")
-while (not done) do
-
-    local event = ffi.new"SDL_Event"
-    while (sdl.pollEvent(event) ~=0) do
-        ig.lib.ImGui_ImplSDL2_ProcessEvent(event);
-        if (event.type == sdl.QUIT) then
-            done = true;
-        end
-        if (event.type == sdl.WINDOWEVENT and event.window.event == sdl.WINDOWEVENT_CLOSE and event.window.windowID == sdl.getWindowID(window)) then
-            done = true;
-        end
-    end
-
-    sdl.gL_MakeCurrent(window, gl_context);
 
 
-    ig_Impl:NewFrame()
-    -------audio gui
+while not window:shouldClose() do
+
+    lj_glfw.pollEvents()
+    
+    gl.glClear(glc.GL_COLOR_BUFFER_BIT)
+    
+    ig_impl:NewFrame()
+        -------audio gui
     if ig.Button("start") then
         audioplayer:start()
     end
@@ -214,14 +206,15 @@ while (not done) do
 
 --]]
     -- end audio gui
-    ig_Impl:Render()
-    sdl.gL_SwapWindow(window);
+   
+    
+    ig_impl:Render()
+    
+    window:swapBuffers()                    
 end
 
 audioplayer:close()
-ig_Impl:destroy()
-
-sdl.gL_DeleteContext(gl_context);
-sdl.destroyWindow(window);
-sdl.Quit();
+ig_impl:destroy()
+window:destroy()
+lj_glfw.terminate()
 

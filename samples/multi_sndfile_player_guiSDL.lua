@@ -59,11 +59,18 @@ if (sdl.Init(sdl.INIT_VIDEO + sdl.INIT_EVENTS) < 0) then
 end
 
 local apis = rt.compiled_api()
-local api = apis[0]
---local api = rt.API_WINDOWS_WASAPI
-local dac = rt.create(api)
-local device = rt.get_default_output_device(dac)
-print("using",ffi.string(rt.api_name(api)))
+local api, dac, device
+local numcompiledapis = rt.get_num_compiled_apis()
+for i=0,numcompiledapis-1 do
+	api = apis[i]
+	dac = rt.create(api)
+	if rt.device_count(dac) > 0 then --to avoid a dac without devices
+		device = rt.get_default_output_device(dac)
+		break
+	end
+end
+print("using",ffi.string(rt.api_name(api)),"device",device)
+
 --copy specs from file
 local info = sndf.get_info(filename)
 local audioplayer,err = AudioPlayer({

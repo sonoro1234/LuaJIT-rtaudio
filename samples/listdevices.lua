@@ -52,7 +52,12 @@ for i=0,numcompiledapis-1 do --k,api in pairs(compiledapis) do
         print("\tis_default_input",info.is_default_input>0)
         print("\tnative_formats",info.native_formats)
         print("\t",formats_str(info.native_formats))
---sample rates
+        --sample rates
+        print"\tsample rates"
+        for k=0,15 do
+            if info.sample_rates[k]==0 then break end
+            print("\t",k,info.sample_rates[k])
+        end
     end
 end
 

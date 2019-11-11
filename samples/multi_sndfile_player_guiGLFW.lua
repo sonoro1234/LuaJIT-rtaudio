@@ -1,5 +1,3 @@
-
-
 local ffi = require 'ffi'
 --https://github.com/sonoro1234/LuaJIT-libsndfile
 local sndf = require"sndfile_ffi"
@@ -48,74 +46,126 @@ end
 
 
 local filename = "african_roomS.wav";
---local filename = "arugh.wav" --"sample.wav";
 
+RtAudioInfo = rt.GetAllInfo()
 
-
-local apis = rt.compiled_api()
-local api, dac, device
-local numcompiledapis = rt.get_num_compiled_apis()
-for i=0,numcompiledapis-1 do
-	api = apis[i]
-	dac = rt.create(api)
-	if rt.device_count(dac) > 0 then --to avoid a dac without devices
-		device = rt.get_default_output_device(dac)
-		break
-	end
-end
-print("using",ffi.string(rt.api_name(api)),"device",device)
---copy specs from file
-local info = sndf.get_info(filename)
-local audioplayer,err = AudioPlayer({
-    dac = dac,
-    device = device,
-    freq = info.samplerate, 
-    format = rt.FORMAT_FLOAT32,
-    channels = info.channels, 
-    samples = 1024},
-    delayfunc,fxdata,delaycdef)
-
-if not audioplayer then print(err);error"not audioplayer" end
-
-
-print("---------------opened device",device)
-local info = rt.get_device_info(dac,device)
-        print("\tprobed",info.probed>0)
-        print("\tname",ffi.string(info.name))
-        print("\toutput_channels",info.output_channels)
-        print("\tinput_channels",info.input_channels)
-        print("\tduplex_channels",info.duplex_channels)
-        print("\tpreferred_sample_rate",info.preferred_sample_rate)
-        print("\tis_default_output",info.is_default_output>0)
-        print("\tis_default_input",info.is_default_input>0)
-        print("\tnative_formats",info.native_formats)
-print("---------------")
-----------------------------------------------------
-
---insert 3 files
---level 0.1, timeoffset 0
-if not audioplayer:insert(filename,1,0) then error"failed insert" end
---will not load, diferent channels
-local node2 = audioplayer:insert("arughSt.wav",0.1,0.75)
---assert(not node2)
-audioplayer:insert(filename,0.7,1.5)
-
-for node in audioplayer:nodes() do
-    print("node",node.sf)
+---get output devices
+local out_devices = {}
+for i,API in ipairs(RtAudioInfo.APIS) do
+    out_devices[API] = out_devices[API] or {names={},ids={}}
+    for j=0,RtAudioInfo.API[API].device_count-1 do
+        local dev = RtAudioInfo.API[API].devices[j]
+        if dev.output_channels > 0 then
+            table.insert(out_devices[API].names , dev.name)
+            table.insert(out_devices[API].ids , j)
+        end
+    end
 end
 
+------------------
 
---audioplayer:record("recording.wav",sndf.SF_FORMAT_WAV+sndf.SF_FORMAT_FLOAT)
-print("audioplayer.recordfile",audioplayer.recordfile)
+local API = RtAudioInfo.APIS[1]
+device = RtAudioInfo.API[API].default_output
 
-print"--------------------------------------"
---------------------------------------------------
+local function setDEV(API,device)
+    print("using",API,"device",device)
+    local api = rt.compiled_api_by_name(API)
+    local dac = rt.create(api)
+    --copy specs from file
+    local info = sndf.get_info(filename)
+    local audioplayer,err = AudioPlayer({
+        dac = dac,
+        device = device,
+        freq = info.samplerate, 
+        format = rt.FORMAT_FLOAT32,
+        channels = info.channels, 
+        samples = 1024},
+        delayfunc,fxdata,delaycdef)
+
+    if not audioplayer then print(err);error"not audioplayer" end
+
+    local devinf = RtAudioInfo.API[API].devices[device]
+    print("---------------opened device",device)
+    for k,v in pairs(devinf) do print("\t",k,v) end
+    print("---------------")
+    ----------------------------------------------------
+    
+    --insert 3 files
+    --level 0.1, timeoffset 0
+    if not audioplayer:insert(filename,1,0) then error"failed insert" end
+    --will not load, diferent channels
+    local node2 = audioplayer:insert("arughSt.wav",0.1,0.75)
+    --assert(not node2)
+    audioplayer:insert(filename,0.7,1.5)
+    
+    for node in audioplayer:nodes() do
+        print("node",node.sf)
+    end
+    
+    --audioplayer:record("recording.wav",sndf.SF_FORMAT_WAV+sndf.SF_FORMAT_FLOAT)
+    print("audioplayer.recordfile",audioplayer.recordfile)
+    
+    print"--------------------------------------"
+    --------------------------------------------------
+    return audioplayer
+end
+
+local audioplayer = setDEV(API,device)
+
 
 local lj_glfw = require"glfw"
 local gllib = require"gl"
 gllib.set_loader(lj_glfw)
 local gl, glc, glu, glext = gllib.libraries()
 local ig = require"imgui.glfw"
+
+------------------- LuaCombo
+local function LuaCombo(label,strs,action)
+    action = action or function() end
+    strs = strs or {"none"}
+    local combo = {}
+    local strings 
+    combo.currItem = ffi.new("int[1]",0)
+    local Items 
+    function combo:set(strs, ini)
+        strings = strs
+        self.currItem[0] = ini or 0
+        Items = ffi.new("const char*["..(#strs).."]")
+        for i = 0,#strs-1  do
+            Items[i] = ffi.new("const char*",strs[i+1])
+        end
+        action(ffi.string(Items[self.currItem[0]]),self.currItem[0])
+    end
+    function combo:set_index(ind)
+        self.currItem[0] = ind or 0
+        action(ffi.string(Items[self.currItem[0]]),self.currItem[0])
+    end
+    combo:set(strs)
+    function combo:draw()
+        if ig.Combo(label,self.currItem,Items,#strings,-1) then
+            action(ffi.string(Items[self.currItem[0]]),self.currItem[0])
+        end
+    end
+    function combo:get()
+        return ffi.string(Items[self.currItem[0]]),self.currItem[0]
+    end
+    return combo
+end
+
+
+DEVCombo = LuaCombo("DEV")
+APICombo = LuaCombo("APIS",RtAudioInfo.APIS,function(val,nit) 
+    DEVCombo:set(out_devices[val].names) 
+end)
+APICombo:set_index(RtAudioInfo.APIbyNAME[API])
+
+local function REsetDEV()
+    audioplayer:close()
+    local API,apiid = APICombo:get()
+    local devs,devid = DEVCombo:get()
+    audioplayer = setDEV(API,out_devices[API].ids[devid+1])
+end
+
 
 lj_glfw.setErrorCallback(function(error,description)
     print("GLFW error:",error,ffi.string(description or ""));
@@ -124,6 +174,7 @@ end)
 lj_glfw.init()
 local window = lj_glfw.Window(700,500)
 window:makeContextCurrent() 
+lj_glfw.glfw.glfwSwapInterval(1)
 
 --choose implementation
 --local ig_impl = ig.ImplGlfwGL3() --multicontext
@@ -138,8 +189,7 @@ ig_impl:Init(window, true)
 
 
 local streamtime = ffi.new("float[1]")
-
-
+local play_text, stop_text = "  > "," || "
 while not window:shouldClose() do
 
     lj_glfw.pollEvents()
@@ -147,12 +197,36 @@ while not window:shouldClose() do
     gl.glClear(glc.GL_COLOR_BUFFER_BIT)
     
     ig_impl:NewFrame()
-        -------audio gui
-    if ig.Button("start") then
-        audioplayer:start()
+    
+    -- device PopUp
+    if ig.Button"device" then ig.OpenPopup"dev_set" end
+    ig.SetNextWindowContentSize(ig.ImVec2(400,0))
+    if ig.BeginPopupModal"dev_set" then
+        
+        APICombo:draw()
+        DEVCombo:draw()
+        if ig.Button("OK") then
+            REsetDEV()
+            ig.CloseCurrentPopup(); 
+        end
+        ig.SameLine()
+        if ig.Button("cancel") then
+            ig.CloseCurrentPopup(); 
+        end
+        
+        ig.EndPopup()
     end
-    if ig.Button("stop") then
-        audioplayer:stop()
+
+        -------audio gui
+    ig.Separator()
+    local play_lab
+    if audioplayer:is_playing() then play_lab = stop_text else play_lab = play_text end
+    if ig.Button(play_lab) then
+        if audioplayer:is_playing() then
+            audioplayer:stop()
+        else
+            audioplayer:start()
+        end
     end
 
     streamtime[0] = audioplayer:get_stream_time()
@@ -164,7 +238,8 @@ while not window:shouldClose() do
     ig.SliderScalar("delay",ig.lib.ImGuiDataType_Double,fxdata.delay,ffi.new("double[1]",0),ffi.new("double[1]",fxdata.maxdelay))
 
     ig.SliderScalar("feedback",ig.lib.ImGuiDataType_Double,fxdata.feedback,ffi.new("double[1]",0),ffi.new("double[1]",1))
-
+    
+    ig.Separator()
     if ig.Button("nodes") then
         print"----------nodes---------------"
         print(audioplayer.root.next[0])
@@ -177,38 +252,38 @@ while not window:shouldClose() do
     if ig.Button("insert") then
         audioplayer:insert(filename,1,streamtime[0])
     end
-	ig.SameLine()
+    ig.SameLine()
     if ig.Button("insert arugh") then
         audioplayer:insert("arughSt.wav",0.5,streamtime[0])
     end
-	if audioplayer.recordfile~=nil then
-	if ig.Button("close record") then
+    if audioplayer.recordfile~=nil then
+    if ig.Button("close record") then
         audioplayer.recordfile:close()
     end
-	end
+    end
 ---[[
 
-	local format = string.format
-	local cbuf = ffi.new"char[201]"
-	local level = ffi.new("float[1]")
-	ig.PushItemWidth(80)
+    local format = string.format
+    local cbuf = ffi.new"char[201]"
+    local level = ffi.new("float[1]")
+    ig.PushItemWidth(80)
     for node in audioplayer:nodes() do
-		ig.PushIDPtr(node)
-		ffi.C.sprintf(cbuf,"%p",node)
-		ig.Text(cbuf);ig.SameLine()
-		level[0] = node.level
-		if ig.SliderFloat("level",level,0,1) then
-			node.level = level[0]
-		end
-		ig.SameLine();ig.Text(format("time:%4.2f",node.timeoffset))
-		ig.SameLine();ig.Text(format("srate:%4.0f",node.sf:samplerate()));ig.SameLine();
+        ig.PushIDPtr(node)
+        ffi.C.sprintf(cbuf,"%p",node)
+        ig.Text(cbuf);ig.SameLine()
+        level[0] = node.level
+        if ig.SliderFloat("level",level,0,1) then
+            node.level = level[0]
+        end
+        ig.SameLine();ig.Text(format("time:%4.2f",node.timeoffset))
+        ig.SameLine();ig.Text(format("srate:%4.0f",node.sf:samplerate()));ig.SameLine();
 
-		if ig.SmallButton("delete") then
-			audioplayer:erase(node)
-		end
-		ig.PopID()
+        if ig.SmallButton("delete") then
+            audioplayer:erase(node)
+        end
+        ig.PopID()
     end
-	ig.PopItemWidth()
+    ig.PopItemWidth()
 
 --]]
     -- end audio gui
@@ -223,4 +298,3 @@ audioplayer:close()
 ig_impl:destroy()
 window:destroy()
 lj_glfw.terminate()
-

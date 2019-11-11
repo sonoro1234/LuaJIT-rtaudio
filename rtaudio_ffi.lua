@@ -209,6 +209,67 @@ function M.MakeAudioCallback(func, ...)
 	return cb:funcptr() , cb
 end
 
+function M.GetAllInfo()
+    local I = {}
+    local formats = {
+        FORMAT_SINT8 = 0x01,
+        FORMAT_SINT16 = 0x02,
+        FORMAT_SINT24 = 0x04,
+        FORMAT_SINT32 = 0x08,
+        FORMAT_FLOAT32 = 0x10,
+        FORMAT_FLOAT64 = 0x20,
+    }
+
+    local function formats_tbl(ff)
+        local str = {}
+        for k,v in pairs(formats) do
+            if bit.band(ff,v)~=0 then
+                table.insert(str,k)
+            end
+        end
+        table.sort(str)
+        return str
+    end
+    
+    local numcompiledapis = M.get_num_compiled_apis()
+    local compiledapis = M.compiled_api()
+    I = {APIS={},API={},APIbyNAME={}}
+    for i=0,numcompiledapis-1 do
+        I.APIS[i+1] = ffi.string(M.api_name(compiledapis[i]))
+        I.APIbyNAME[I.APIS[i+1]] = i
+    end
+    for i=0,numcompiledapis-1 do
+        local api = compiledapis[i]
+        local dac = M.create(api)
+        local apikey = ffi.string(M.api_name(api))
+        I.API[apikey] = {}
+        I.API[apikey].default_output = M.get_default_output_device(dac)
+        I.API[apikey].default_input = M.get_default_input_device(dac)
+        I.API[apikey].device_count = M.device_count(dac)
+        I.API[apikey].devices = {}
+        for i=0,M.device_count(dac)-1 do
+            local info = M.get_device_info(dac,i)
+            I.API[apikey].devices[i] = {}
+            I.API[apikey].devices[i].probed = info.probed>0
+            I.API[apikey].devices[i].name = ffi.string(info.name)
+            I.API[apikey].devices[i].output_channels = info.output_channels
+            I.API[apikey].devices[i].input_channels = info.input_channels
+            I.API[apikey].devices[i].duplex_channels = info.duplex_channels
+            I.API[apikey].devices[i].preferred_sample_rate = info.preferred_sample_rate
+            I.API[apikey].devices[i].is_default_output = info.is_default_output>0
+            I.API[apikey].devices[i].is_default_input = info.is_default_input>0
+            I.API[apikey].devices[i].native_formats = formats_tbl(info.native_formats)
+            I.API[apikey].devices[i].sample_rates = {}
+            --sample rates
+            for k=0,15 do
+                if info.sample_rates[k]==0 then break end
+                I.API[apikey].devices[i].sample_rates[k+1] = info.sample_rates[k]
+            end
+        end
+        M.destroy(dac)
+    end
+    return I
+end
 
 setmetatable(M,{
 __index = function(t,k)

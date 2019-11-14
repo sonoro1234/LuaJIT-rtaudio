@@ -160,7 +160,7 @@ function AudioPlayer_mt:__new(t,postfunc,postdata,postcode)
     ap.resampler_input_cb = cbmaker:additional_cb(function()
         local sndf = require"sndfile_ffi"
         return sndf.resampler_input_cb
-    end,"src_callback_t")
+    end,"long (*) (void *cb_data, float **data)")--"src_callback_t")
     local ret = rt.open_stream(ap.dac,ap.outpar,nil,ap.format,ap.sample_rate,ap.bufferFrames, thecallback,nil,options,nil)
 
     if ret < 0 then

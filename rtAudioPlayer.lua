@@ -25,29 +25,6 @@ local function AudioInit(audioplayer,audioplayercdef,postfunc,postdata,postcode)
         end
         return typebuffer
     end
-    --postfunc will get upvalues from AudioInit (ffi,spec)
-    local function setupvalues(func)
-        for i=1,math.huge do
-            local name,val =debug.getupvalue(func,i)
-            if not name then break end
-            if not val then
-                --print("searching",name)
-                local found = false
-                for j=1,math.huge do
-                    local name2,val2 = debug.getlocal(2,j)
-                    if not name2 then break end
-                    --print("found",name2)
-                    if name == name2 then
-                        debug.setupvalue(func,i,val2)
-                        found = true
-                        break
-                    end
-                end
-                if not found then error("value for upvalue "..name.." not found") end
-            end
-        end
-    end
-
     
     ffi.cdef(audioplayercdef)
     audioplayer = ffi.cast("rt_audioplayer*",audioplayer)
@@ -58,8 +35,7 @@ local function AudioInit(audioplayer,audioplayercdef,postfunc,postdata,postcode)
     local timefac = 1/audioplayer.sample_rate
     local bufpointer = typebuffer.."*"
     local readfunc,writefunc = "readf_"..typebuffer,"writef_"..typebuffer
-    setupvalues(postfunc)
-    postfunc = setfenv(postfunc,setmetatable({ffi=ffi,rt=rt},{__index=_G}))
+
     local postfuncS = postfunc(postdata,postcode,typebuffer,nchannels,audioplayer.sample_rate)
     
     local floor = math.floor

@@ -14,6 +14,7 @@ ffi.cdef(delaycdef)
 local fxdata = ffi.new("delay",{ffi.new("double[1]",0.0),ffi.new("double[1]",1),2})
 
 local function delayfunc(data,code,typebuffer,nchannels,samplerate)
+    local ffi = require"ffi"
     ffi.cdef(code)
     data = ffi.cast("delay*",data)
     local index = 0

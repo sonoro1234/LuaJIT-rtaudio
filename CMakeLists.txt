@@ -26,6 +26,8 @@ set(RTAUDIO_BUILD_STATIC_LIBS OFF CACHE INTERNAL "dont compile library static li
 set(RTAUDIO_TARGETNAME_UNINSTALL "uninstall_rtaudio" CACHE INTERNAL "uninstall rtaudio name" FORCE)
 
 add_subdirectory(rtaudio EXCLUDE_FROM_ALL)
+#avoid installing public headers on cmake >=3.14
+set_target_properties(rtaudio PROPERTIES PUBLIC_HEADER "")
 
 add_custom_target(rtaudio_ffi ALL)
 add_dependencies(rtaudio_ffi rtaudio)

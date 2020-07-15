@@ -126,12 +126,12 @@ local function LuaCombo(label,strs,action)
     strs = strs or {"none"}
     local combo = {}
     local strings 
-    combo.currItem = ffi.new("int[1]",0)
+    combo.currItem = ffi.new("int[?]",1)
     local Items 
     function combo:set(strs, ini)
         strings = strs
         self.currItem[0] = ini or 0
-        Items = ffi.new("const char*["..(#strs).."]")
+        Items = ffi.new("const char*[?]",#strs)
         for i = 0,#strs-1  do
             Items[i] = ffi.new("const char*",strs[i+1])
         end

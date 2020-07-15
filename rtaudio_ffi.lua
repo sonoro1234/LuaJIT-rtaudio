@@ -23,6 +23,7 @@ typedef int (*rtaudio_cb_t)(void *out, void *in, unsigned int nFrames,
                             double stream_time, rtaudio_stream_status_t status,
                             void *userdata);
 typedef enum rtaudio_error {
+  RTAUDIO_NO_ERROR = -1,
   RTAUDIO_ERROR_WARNING,
   RTAUDIO_ERROR_DEBUG_WARNING,
   RTAUDIO_ERROR_UNSPECIFIED,
@@ -80,6 +81,7 @@ typedef struct rtaudio *rtaudio_t;
  const char *rtaudio_api_display_name(rtaudio_api_t api);
  rtaudio_api_t rtaudio_compiled_api_by_name(const char *name);
  const char *rtaudio_error(rtaudio_t audio);
+ rtaudio_error_t rtaudio_error_type(rtaudio_t audio);
  rtaudio_t rtaudio_create(rtaudio_api_t api);
  void rtaudio_destroy(rtaudio_t audio);
  rtaudio_api_t rtaudio_current_api(rtaudio_t audio);
@@ -144,6 +146,9 @@ end
 function rtaudio_t:current_api()
     return lib.rtaudio_current_api(self)
 end
+function rtaudio_t:error_type()
+    return lib.rtaudio_error_type(self)
+end
 function rtaudio_t:get_device_info(i)
     return lib.rtaudio_get_device_info(self,i)
 end
@@ -172,20 +177,20 @@ end
 function rtaudio_t:get_stream_latency()
     return lib.rtaudio_get_stream_latency(self)
 end
+function rtaudio_t:set_stream_time(time)
+    return lib.rtaudio_set_stream_time(self,time)
+end
 function rtaudio_t:start_stream()
     return lib.rtaudio_start_stream(self)
 end
-function rtaudio_t:set_stream_time(time)
-    return lib.rtaudio_set_stream_time(self,time)
+function rtaudio_t:get_stream_time()
+    return lib.rtaudio_get_stream_time(self)
 end
 function rtaudio_t:stop_stream()
     return lib.rtaudio_stop_stream(self)
 end
 function rtaudio_t:open_stream(output_params, input_params, format, sample_rate, buffer_frames, cb, userdata, options, errcb)
     return lib.rtaudio_open_stream(self,output_params, input_params, format, sample_rate, buffer_frames, cb, userdata, options, errcb)
-end
-function rtaudio_t:get_stream_time()
-    return lib.rtaudio_get_stream_time(self)
 end
 function rtaudio_t:is_stream_running()
     return lib.rtaudio_is_stream_running(self)

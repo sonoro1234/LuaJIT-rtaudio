@@ -65,7 +65,7 @@ end
 
 ------------------
 
-local API = RtAudioInfo.APIS[1]
+local API = RtAudioInfo.APIS[2]
 device = RtAudioInfo.API[API].default_output
 
 local function setDEV(API,device)
@@ -127,13 +127,15 @@ local function LuaCombo(label,strs,action)
     local combo = {}
     local strings 
     combo.currItem = ffi.new("int[?]",1)
-    local Items 
+    local Items, anchors
     function combo:set(strs, ini)
+        anchors = {}
         strings = strs
         self.currItem[0] = ini or 0
         Items = ffi.new("const char*[?]",#strs)
         for i = 0,#strs-1  do
-            Items[i] = ffi.new("const char*",strs[i+1])
+            anchors[#anchors+1] = ffi.new("const char*",strs[i+1])
+            Items[i] = anchors[#anchors]
         end
         action(ffi.string(Items[self.currItem[0]]),self.currItem[0])
     end

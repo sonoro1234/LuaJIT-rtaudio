@@ -70,7 +70,8 @@ function rtaudio_t:destroy()
 end
 
 ]]
-for k,v in pairs(parser.defsT) do
+cp2c.table_do_sorted(parser.defsT, function(k,v)
+--for k,v in pairs(parser.defsT) do
 	if v[1].argsT[1] then
 		if v[1].argsT[1].type  =="rtaudio_t"  and v[1].funcname~="rtaudio_destroy" then 
 			--print(v[1].funcname,v[1].signature) 
@@ -98,7 +99,8 @@ for k,v in pairs(parser.defsT) do
 			rtaudio_t_code = rtaudio_t_code..code
 		end
 	end
-end
+--end
+end)
 rtaudio_t_code = rtaudio_t_code..[[
 
 ffi.cdef"typedef struct rtaudio rtaudio_type"

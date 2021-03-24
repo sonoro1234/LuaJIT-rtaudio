@@ -1106,4 +1106,15 @@ local function location(file,locpathT,defines)
     return location_it
 end
 M.location = location
+local function table_do_sorted(t,f)
+	local sorted = {}
+	for k,v in pairs(t) do
+		table.insert(sorted,k)
+	end
+	table.sort(sorted)
+	for ii,k in ipairs(sorted) do
+		f(k,t[k])
+	end
+end
+M.table_do_sorted = table_do_sorted
 return M

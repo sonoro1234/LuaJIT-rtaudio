@@ -140,26 +140,14 @@ function rtaudio_t:destroy()
 end
 
 
-function rtaudio_t:get_default_output_device()
-    return lib.rtaudio_get_default_output_device(self)
-end
-function rtaudio_t:current_api()
-    return lib.rtaudio_current_api(self)
-end
-function rtaudio_t:error_type()
-    return lib.rtaudio_error_type(self)
-end
-function rtaudio_t:get_device_info(i)
-    return lib.rtaudio_get_device_info(self,i)
-end
 function rtaudio_t:abort_stream()
     return lib.rtaudio_abort_stream(self)
 end
-function rtaudio_t:get_default_input_device()
-    return lib.rtaudio_get_default_input_device(self)
+function rtaudio_t:close_stream()
+    return lib.rtaudio_close_stream(self)
 end
-function rtaudio_t:is_stream_open()
-    return lib.rtaudio_is_stream_open(self)
+function rtaudio_t:current_api()
+    return lib.rtaudio_current_api(self)
 end
 function rtaudio_t:device_count()
     return lib.rtaudio_device_count(self)
@@ -168,35 +156,47 @@ function rtaudio_t:error()
     local ret = lib.rtaudio_error(self)
     if ret==nil then return nil else return ffi.string(ret) end
 end
-function rtaudio_t:show_warnings(show)
-    return lib.rtaudio_show_warnings(self,show)
+function rtaudio_t:error_type()
+    return lib.rtaudio_error_type(self)
 end
-function rtaudio_t:get_stream_sample_rate()
-    return lib.rtaudio_get_stream_sample_rate(self)
+function rtaudio_t:get_default_input_device()
+    return lib.rtaudio_get_default_input_device(self)
+end
+function rtaudio_t:get_default_output_device()
+    return lib.rtaudio_get_default_output_device(self)
+end
+function rtaudio_t:get_device_info(i)
+    return lib.rtaudio_get_device_info(self,i)
 end
 function rtaudio_t:get_stream_latency()
     return lib.rtaudio_get_stream_latency(self)
 end
-function rtaudio_t:set_stream_time(time)
-    return lib.rtaudio_set_stream_time(self,time)
-end
-function rtaudio_t:start_stream()
-    return lib.rtaudio_start_stream(self)
+function rtaudio_t:get_stream_sample_rate()
+    return lib.rtaudio_get_stream_sample_rate(self)
 end
 function rtaudio_t:get_stream_time()
     return lib.rtaudio_get_stream_time(self)
 end
-function rtaudio_t:stop_stream()
-    return lib.rtaudio_stop_stream(self)
-end
-function rtaudio_t:open_stream(output_params, input_params, format, sample_rate, buffer_frames, cb, userdata, options, errcb)
-    return lib.rtaudio_open_stream(self,output_params, input_params, format, sample_rate, buffer_frames, cb, userdata, options, errcb)
+function rtaudio_t:is_stream_open()
+    return lib.rtaudio_is_stream_open(self)
 end
 function rtaudio_t:is_stream_running()
     return lib.rtaudio_is_stream_running(self)
 end
-function rtaudio_t:close_stream()
-    return lib.rtaudio_close_stream(self)
+function rtaudio_t:open_stream(output_params, input_params, format, sample_rate, buffer_frames, cb, userdata, options, errcb)
+    return lib.rtaudio_open_stream(self,output_params, input_params, format, sample_rate, buffer_frames, cb, userdata, options, errcb)
+end
+function rtaudio_t:set_stream_time(time)
+    return lib.rtaudio_set_stream_time(self,time)
+end
+function rtaudio_t:show_warnings(show)
+    return lib.rtaudio_show_warnings(self,show)
+end
+function rtaudio_t:start_stream()
+    return lib.rtaudio_start_stream(self)
+end
+function rtaudio_t:stop_stream()
+    return lib.rtaudio_stop_stream(self)
 end
 ffi.cdef"typedef struct rtaudio rtaudio_type"
 M.rtaudio = ffi.metatype("rtaudio_type",rtaudio_t)

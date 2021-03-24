@@ -56,19 +56,34 @@ for i,API in ipairs(RtAudioInfo.APIS) do
     out_devices[API] = out_devices[API] or {names={},ids={}}
     for j=0,RtAudioInfo.API[API].device_count-1 do
         local dev = RtAudioInfo.API[API].devices[j]
-        if dev.output_channels > 0 then
+        if dev.output_channels > 0 and dev.probed then
             table.insert(out_devices[API].names , dev.name)
             table.insert(out_devices[API].ids , j)
         end
     end
+	--no device
+	if #out_devices[API].names == 0 then
+            table.insert(out_devices[API].names , "none")
+            table.insert(out_devices[API].ids , -1)
+	end
 end
 
 ------------------
 
-local API = RtAudioInfo.APIS[2]
-device = RtAudioInfo.API[API].default_output
+local API 
+local device 
+--check first good api-default device
+for i=1,#RtAudioInfo.APIS do
+	API = RtAudioInfo.APIS[i]
+	device = RtAudioInfo.API[API].default_output
+	print("test",API,device)
+	if RtAudioInfo.API[API].devices[device].probed then
+		break
+	end
+end
 
-local function setDEV(API,device)
+local function setDEV(API_s,device_s)
+	API, device = API_s,device_s
     print("using",API,"device",device)
     local api = rt.compiled_api_by_name(API)
     local dac = rt.create(api)
@@ -156,17 +171,26 @@ local function LuaCombo(label,strs,action)
 end
 
 
-DEVCombo = LuaCombo("DEV")
-APICombo = LuaCombo("APIS",RtAudioInfo.APIS,function(val,nit) 
+local DEVCombo = LuaCombo("DEV")
+local APICombo = LuaCombo("APIS",RtAudioInfo.APIS,function(val,nit)
     DEVCombo:set(out_devices[val].names) 
 end)
-APICombo:set_index(RtAudioInfo.APIbyNAME[API])
+
+local function SetDevCombos()
+    APICombo:set_index(RtAudioInfo.APIbyNAME[API])
+    DEVCombo:set_index(device)
+end
+
+SetDevCombos()
 
 local function REsetDEV()
-    audioplayer:close()
     local API,apiid = APICombo:get()
     local devs,devid = DEVCombo:get()
-    audioplayer = setDEV(API,out_devices[API].ids[devid+1])
+	local device = out_devices[API].ids[devid+1]
+	if device ~= -1 then
+		audioplayer:close()
+		audioplayer = setDEV(API,device)
+	end
 end
 
 
@@ -202,7 +226,10 @@ while not window:shouldClose() do
     ig_impl:NewFrame()
     
     -- device PopUp
-    if ig.Button"device" then ig.OpenPopup"dev_set" end
+    if ig.Button"device" then
+        SetDevCombos()
+        ig.OpenPopup"dev_set" 
+    end
     ig.SetNextWindowContentSize(ig.ImVec2(400,0))
     if ig.BeginPopupModal"dev_set" then
         

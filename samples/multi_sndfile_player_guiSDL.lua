@@ -67,7 +67,11 @@ for i=0,numcompiledapis-1 do
 	dac = rt.create(api)
 	if rt.device_count(dac) > 0 then --to avoid a dac without devices
 		device = rt.get_default_output_device(dac)
-		break
+		local info = rt.get_device_info(dac,device)
+		print("info.probed",info.probed)
+		if info.probed > 0 then
+			break
+		end
 	end
 end
 print("using",ffi.string(rt.api_name(api)),"device",device)

@@ -119,6 +119,7 @@ static const int RTAUDIO_FLAGS_MINIMIZE_LATENCY = 0x2;
 static const int RTAUDIO_FLAGS_HOG_DEVICE = 0x4;
 static const int RTAUDIO_FLAGS_SCHEDULE_REALTIME = 0x8;
 static const int RTAUDIO_FLAGS_ALSA_USE_DEFAULT = 0x10;
+static const int RTAUDIO_FLAGS_JACK_DONT_CONNECT = 0x20;
 static const int RTAUDIO_STATUS_INPUT_OVERFLOW = 0x1;
 static const int RTAUDIO_STATUS_OUTPUT_UNDERFLOW = 0x2;
 static const int NUM_SAMPLE_RATES = 16;

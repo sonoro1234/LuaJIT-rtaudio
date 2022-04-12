@@ -121,10 +121,10 @@ function AudioPlayer_mt:__new(t,postfunc,postdata,postcode)
     local ap = ffi.new("rt_audioplayer")
     assert(ap.root.next == nil)
     
-    ap.dac = t.dac
+    ap.dac = t.dac or rt.create(rt.compiled_api_by_name(t.api))
     ap.bufferFrames[0] = t.samples
     ap.sample_rate = t.freq
-    ap.outpar[0].device_id = t.device
+    ap.outpar[0].device_id = t.device or ap.dac:get_default_output_device()
     ap.outpar[0].num_channels = t.channels
     ap.format = t.format
     local mutex_ = Mutex()
@@ -132,12 +132,12 @@ function AudioPlayer_mt:__new(t,postfunc,postdata,postcode)
     table.insert(mutex_anchor, mutex_)
     --print("--------------------------format",ap.format ,t.format)
     local options
-    local thecallback, cbmaker = rt.MakeAudioCallback(AudioInit,ap,audioplayercdef,postfunc,postdata,postcode)
+    local thecallback, cbmaker = rt.MakeAudioCallback(t.audio_init or AudioInit,ap,audioplayercdef,postfunc,postdata,postcode)
     ap.resampler_input_cb = cbmaker:additional_cb(function()
         local sndf = require"sndfile_ffi"
         return sndf.resampler_input_cb
     end,"long (*) (void *cb_data, float **data)")--"src_callback_t")
-    local ret = rt.open_stream(ap.dac,ap.outpar,nil,ap.format,ap.sample_rate,ap.bufferFrames, thecallback,nil,options,nil)
+    local ret = rt.open_stream(ap.dac,ap.outpar,nil,ap.format,ap.sample_rate,ap.bufferFrames, thecallback,t.userdata,options,nil)
 
     if ret < 0 then
         local err = rt.error(t.dac)

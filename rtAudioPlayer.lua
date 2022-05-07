@@ -116,7 +116,7 @@ ffi.cdef(audioplayercdef)
 local AudioPlayer_mt = {}
 AudioPlayer_mt.__index = AudioPlayer_mt
 local mutex_anchor = {}
-function AudioPlayer_mt:__new(t,postfunc,postdata,postcode)
+function AudioPlayer_mt:__new(t,postfunc,postdata,postcode,...)
     local postfunc = postfunc or function() return function() end end
     local ap = ffi.new("rt_audioplayer")
     assert(ap.root.next == nil)
@@ -132,7 +132,7 @@ function AudioPlayer_mt:__new(t,postfunc,postdata,postcode)
     table.insert(mutex_anchor, mutex_)
     --print("--------------------------format",ap.format ,t.format)
     local options
-    local thecallback, cbmaker = rt.MakeAudioCallback(t.audio_init or AudioInit,ap,audioplayercdef,postfunc,postdata,postcode)
+    local thecallback, cbmaker = rt.MakeAudioCallback(t.audio_init or AudioInit,ap,audioplayercdef,postfunc,postdata,postcode,...)
     ap.resampler_input_cb = cbmaker:additional_cb(function()
         local sndf = require"sndfile_ffi"
         return sndf.resampler_input_cb

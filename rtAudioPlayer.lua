@@ -140,7 +140,7 @@ function AudioPlayer_mt:__new(t,postfunc,postdata,postcode,...)
     local ret = rt.open_stream(ap.dac,ap.outpar,nil,ap.format,ap.sample_rate,ap.bufferFrames, thecallback,t.userdata,options,nil)
 
     if ret < 0 then
-        local err = rt.error(t.dac)
+        local err = rt.error(ap.dac)
         return nil, err~=nil and ffi.string(err) or "unknown error opening device"
     end
     ffi.gc(ap,self.close)

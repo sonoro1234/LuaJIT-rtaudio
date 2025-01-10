@@ -1,5 +1,4 @@
 local ffi = require"ffi"
-
 --uncomment to debug cdef calls
 ---[[
 local ffi_cdef = function(code)
@@ -15,7 +14,8 @@ local ffi_cdef = function(code)
     end
 end
 --]]
-ffi_cdef[[
+
+ffi.cdef[[
 typedef unsigned long rtaudio_format_t;
 typedef unsigned int rtaudio_stream_flags_t;
 typedef unsigned int rtaudio_stream_status_t;
@@ -108,7 +108,9 @@ rtaudio_open_stream(rtaudio_t audio, rtaudio_stream_parameters_t *output_params,
  int rtaudio_get_stream_latency(rtaudio_t audio);
  unsigned int rtaudio_get_stream_sample_rate(rtaudio_t audio);
  void rtaudio_show_warnings(rtaudio_t audio, int show);]]
-ffi_cdef[[static const int RTAUDIO_FORMAT_SINT8 = 0x01;
+
+ffi.cdef[[
+static const int RTAUDIO_FORMAT_SINT8 = 0x01;
 static const int RTAUDIO_FORMAT_SINT16 = 0x02;
 static const int RTAUDIO_FORMAT_SINT24 = 0x04;
 static const int RTAUDIO_FORMAT_SINT32 = 0x08;
@@ -124,6 +126,7 @@ static const int RTAUDIO_STATUS_INPUT_OVERFLOW = 0x1;
 static const int RTAUDIO_STATUS_OUTPUT_UNDERFLOW = 0x2;
 static const int NUM_SAMPLE_RATES = 16;
 static const int MAX_NAME_LENGTH = 512;]]
+
 local lib = ffi.load"rtaudio"
 
 local M = {C=lib}
@@ -199,9 +202,9 @@ end
 function rtaudio_t:stop_stream()
     return lib.rtaudio_stop_stream(self)
 end
-ffi.cdef"typedef struct rtaudio rtaudio_type"
-M.rtaudio = ffi.metatype("rtaudio_type",rtaudio_t)
 
+ffi.cdef[[typedef struct rtaudio rtaudio_type]]
+M.rtaudio = ffi.metatype("rtaudio_type",rtaudio_t)
 
 local callback_t
 local callbacks_anchor = {}
@@ -287,5 +290,11 @@ __index = function(t,k)
 end
 })
 
+--require"anima.utils"
+--prtable(M.GetAllInfo())
 
 return M
+
+
+
+

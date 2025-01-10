@@ -53,18 +53,20 @@ RtAudioInfo = rt.GetAllInfo()
 ---get output devices
 local out_devices = {}
 for i,API in ipairs(RtAudioInfo.APIS) do
-    out_devices[API] = out_devices[API] or {names={},ids={}}
+    out_devices[API] = out_devices[API] or {names={},ids={},devID={}}
     for j=0,RtAudioInfo.API[API].device_count-1 do
         local dev = RtAudioInfo.API[API].devices[j]
-        if dev.output_channels > 0 and dev.probed then
+        if dev.output_channels > 0 then
             table.insert(out_devices[API].names , dev.name)
             table.insert(out_devices[API].ids , j)
+            table.insert(out_devices[API].devID , dev.id)
         end
     end
 	--no device
 	if #out_devices[API].names == 0 then
             table.insert(out_devices[API].names , "none")
             table.insert(out_devices[API].ids , -1)
+            table.insert(out_devices[API].devID , 0)
 	end
 end
 
@@ -77,9 +79,7 @@ for i=1,#RtAudioInfo.APIS do
 	API = RtAudioInfo.APIS[i]
 	device = RtAudioInfo.API[API].default_output
 	print("test",API,device)
-	if RtAudioInfo.API[API].devices[device].probed then
-		break
-	end
+	break
 end
 
 local function setDEV(API_s,device_s)
@@ -100,7 +100,9 @@ local function setDEV(API_s,device_s)
 
     if not audioplayer then print(err);error"not audioplayer" end
 
-    local devinf = RtAudioInfo.API[API].devices[device]
+	--now in v6 we have deviceID and device_index
+    local device_i = RtAudioInfo.API[API].devices_by_ID[device]
+    local devinf = RtAudioInfo.API[API].devices[device_i]
     print("---------------opened device",device)
     for k,v in pairs(devinf) do print("\t",k,v) end
     print("---------------")
@@ -177,7 +179,8 @@ end)
 
 local function SetDevCombos()
     APICombo:set_index(RtAudioInfo.APIbyNAME[API])
-    DEVCombo:set_index(device)
+    local device_i = RtAudioInfo.API[API].devices_by_ID[device]
+    DEVCombo:set_index(device_i)
 end
 
 SetDevCombos()
@@ -185,7 +188,7 @@ SetDevCombos()
 local function REsetDEV()
     local API,apiid = APICombo:get()
     local devs,devid = DEVCombo:get()
-	local device = out_devices[API].ids[devid+1]
+	local device = out_devices[API].devID[devid+1]
 	if device ~= -1 then
 		audioplayer:close()
 		audioplayer = setDEV(API,device)

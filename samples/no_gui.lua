@@ -25,9 +25,7 @@ for i=1,#RtAudioInfo.APIS do
 	API = RtAudioInfo.APIS[i]
 	device = RtAudioInfo.API[API].default_output
 	print("test",API,device)
-	if RtAudioInfo.API[API].devices[device].probed then
 		break
-	end
 end
 ------------------
 

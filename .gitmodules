@@ -1,4 +1,5 @@
 [submodule "rtaudio"]
 	path = rtaudio
 	url = https://github.com/sonoro1234/rtaudio
+	branch = master_stdint
 

@@ -22,36 +22,38 @@ typedef unsigned int rtaudio_stream_status_t;
 typedef int (*rtaudio_cb_t)(void *out, void *in, unsigned int nFrames,
                             double stream_time, rtaudio_stream_status_t status,
                             void *userdata);
-typedef enum rtaudio_error {
-  RTAUDIO_NO_ERROR = -1,
+enum rtaudio_error {
+  RTAUDIO_ERROR_NONE = 0,
   RTAUDIO_ERROR_WARNING,
-  RTAUDIO_ERROR_DEBUG_WARNING,
-  RTAUDIO_ERROR_UNSPECIFIED,
+  RTAUDIO_ERROR_UNKNOWN,
   RTAUDIO_ERROR_NO_DEVICES_FOUND,
   RTAUDIO_ERROR_INVALID_DEVICE,
+  RTAUDIO_ERROR_DEVICE_DISCONNECT,
   RTAUDIO_ERROR_MEMORY_ERROR,
   RTAUDIO_ERROR_INVALID_PARAMETER,
   RTAUDIO_ERROR_INVALID_USE,
   RTAUDIO_ERROR_DRIVER_ERROR,
   RTAUDIO_ERROR_SYSTEM_ERROR,
   RTAUDIO_ERROR_THREAD_ERROR,
-} rtaudio_error_t;
+};
+typedef int rtaudio_error_t;
 typedef void (*rtaudio_error_cb_t)(rtaudio_error_t err, const char *msg);
-typedef enum rtaudio_api {
+enum rtaudio_api {
   RTAUDIO_API_UNSPECIFIED,
+  RTAUDIO_API_MACOSX_CORE,
   RTAUDIO_API_LINUX_ALSA,
+  RTAUDIO_API_UNIX_JACK,
   RTAUDIO_API_LINUX_PULSE,
   RTAUDIO_API_LINUX_OSS,
-  RTAUDIO_API_UNIX_JACK,
-  RTAUDIO_API_MACOSX_CORE,
-  RTAUDIO_API_WINDOWS_WASAPI,
   RTAUDIO_API_WINDOWS_ASIO,
+  RTAUDIO_API_WINDOWS_WASAPI,
   RTAUDIO_API_WINDOWS_DS,
   RTAUDIO_API_DUMMY,
   RTAUDIO_API_NUM,
-} rtaudio_api_t;
+};
+typedef int rtaudio_api_t;
 typedef struct rtaudio_device_info {
-  int probed;
+  unsigned int id;
   unsigned int output_channels;
   unsigned int input_channels;
   unsigned int duplex_channels;
@@ -59,7 +61,7 @@ typedef struct rtaudio_device_info {
   int is_default_input;
   rtaudio_format_t native_formats;
   unsigned int preferred_sample_rate;
-  int sample_rates[16];
+  unsigned int sample_rates[16];
   char name[512];
 } rtaudio_device_info_t;
 typedef struct rtaudio_stream_parameters {
@@ -86,11 +88,12 @@ typedef struct rtaudio *rtaudio_t;
  void rtaudio_destroy(rtaudio_t audio);
  rtaudio_api_t rtaudio_current_api(rtaudio_t audio);
  int rtaudio_device_count(rtaudio_t audio);
+ unsigned int rtaudio_get_device_id(rtaudio_t audio, int i);
  rtaudio_device_info_t rtaudio_get_device_info(rtaudio_t audio,
-                                                         int i);
+                                                         unsigned int id);
  unsigned int rtaudio_get_default_output_device(rtaudio_t audio);
  unsigned int rtaudio_get_default_input_device(rtaudio_t audio);
- int
+ rtaudio_error_t
 rtaudio_open_stream(rtaudio_t audio, rtaudio_stream_parameters_t *output_params,
                     rtaudio_stream_parameters_t *input_params,
                     rtaudio_format_t format, unsigned int sample_rate,
@@ -98,14 +101,14 @@ rtaudio_open_stream(rtaudio_t audio, rtaudio_stream_parameters_t *output_params,
                     void *userdata, rtaudio_stream_options_t *options,
                     rtaudio_error_cb_t errcb);
  void rtaudio_close_stream(rtaudio_t audio);
- int rtaudio_start_stream(rtaudio_t audio);
- int rtaudio_stop_stream(rtaudio_t audio);
- int rtaudio_abort_stream(rtaudio_t audio);
+ rtaudio_error_t rtaudio_start_stream(rtaudio_t audio);
+ rtaudio_error_t rtaudio_stop_stream(rtaudio_t audio);
+ rtaudio_error_t rtaudio_abort_stream(rtaudio_t audio);
  int rtaudio_is_stream_open(rtaudio_t audio);
  int rtaudio_is_stream_running(rtaudio_t audio);
  double rtaudio_get_stream_time(rtaudio_t audio);
  void rtaudio_set_stream_time(rtaudio_t audio, double time);
- int rtaudio_get_stream_latency(rtaudio_t audio);
+ long rtaudio_get_stream_latency(rtaudio_t audio);
  unsigned int rtaudio_get_stream_sample_rate(rtaudio_t audio);
  void rtaudio_show_warnings(rtaudio_t audio, int show);]]
 
@@ -169,8 +172,11 @@ end
 function rtaudio_t:get_default_output_device()
     return lib.rtaudio_get_default_output_device(self)
 end
-function rtaudio_t:get_device_info(i)
-    return lib.rtaudio_get_device_info(self,i)
+function rtaudio_t:get_device_id(i)
+    return lib.rtaudio_get_device_id(self,i)
+end
+function rtaudio_t:get_device_info(id)
+    return lib.rtaudio_get_device_info(self,id)
 end
 function rtaudio_t:get_stream_latency()
     return lib.rtaudio_get_stream_latency(self)
@@ -256,10 +262,13 @@ function M.GetAllInfo()
         I.API[apikey].default_input = M.get_default_input_device(dac)
         I.API[apikey].device_count = M.device_count(dac)
         I.API[apikey].devices = {}
+        I.API[apikey].devices_by_ID = {}
         for i=0,M.device_count(dac)-1 do
-            local info = M.get_device_info(dac,i)
+            local ID = dac:get_device_id(i)
+            I.API[apikey].devices_by_ID[ID] = i
+            local info = M.get_device_info(dac,ID)
             I.API[apikey].devices[i] = {}
-            I.API[apikey].devices[i].probed = info.probed>0
+            I.API[apikey].devices[i].id = info.id
             I.API[apikey].devices[i].name = ffi.string(info.name)
             I.API[apikey].devices[i].output_channels = info.output_channels
             I.API[apikey].devices[i].input_channels = info.input_channels
@@ -290,8 +299,8 @@ __index = function(t,k)
 end
 })
 
---require"anima.utils"
---prtable(M.GetAllInfo())
+-- require"anima.utils"
+-- prtable(M.GetAllInfo())
 
 return M
 

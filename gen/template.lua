@@ -90,10 +90,13 @@ function M.GetAllInfo()
         I.API[apikey].default_input = M.get_default_input_device(dac)
         I.API[apikey].device_count = M.device_count(dac)
         I.API[apikey].devices = {}
+        I.API[apikey].devices_by_ID = {}
         for i=0,M.device_count(dac)-1 do
-            local info = M.get_device_info(dac,i)
+            local ID = dac:get_device_id(i)
+            I.API[apikey].devices_by_ID[ID] = i
+            local info = M.get_device_info(dac,ID)
             I.API[apikey].devices[i] = {}
-            I.API[apikey].devices[i].probed = info.probed>0
+            I.API[apikey].devices[i].id = info.id
             I.API[apikey].devices[i].name = ffi.string(info.name)
             I.API[apikey].devices[i].output_channels = info.output_channels
             I.API[apikey].devices[i].input_channels = info.input_channels
@@ -124,8 +127,8 @@ __index = function(t,k)
 end
 })
 
---require"anima.utils"
---prtable(M.GetAllInfo())
+-- require"anima.utils"
+-- prtable(M.GetAllInfo())
 
 return M
 

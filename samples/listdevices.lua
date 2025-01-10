@@ -40,9 +40,9 @@ for i=0,numcompiledapis-1 do --k,api in pairs(compiledapis) do
     
     print"list devices:"
     for i=0,rt.device_count(dac)-1 do
-        print("\nDevice ",i)
-        local info = rt.get_device_info(dac,i)
-        print("\tprobed",info.probed>0)
+        local ID = dac:get_device_id(i)
+        print("\nDevice ",i,ID)
+        local info = rt.get_device_info(dac,ID)
         print("\tname",ffi.string(info.name))
         print("\toutput_channels",info.output_channels)
         print("\tinput_channels",info.input_channels)

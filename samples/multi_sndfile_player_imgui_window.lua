@@ -11,7 +11,7 @@ int sprintf ( char * str, const char * format, ... );
 --------------------------will run in audio thread after playing files
 local delaycdef = [[typedef struct delay{double feedback[1];double delay[1];double maxdelay;} delay]]
 ffi.cdef(delaycdef)
-local fxdata = ffi.new("delay",{ffi.new("double[1]",0.0),ffi.new("double[1]",1),2})
+local fxdata = ffi.new("delay",{{0.5},{1},2})
 
 local function delayfunc(data,code,typebuffer,nchannels,samplerate)
     local ffi = require"ffi"
@@ -78,8 +78,10 @@ local device
 for i=1,#RtAudioInfo.APIS do
 	API = RtAudioInfo.APIS[i]
 	device = RtAudioInfo.API[API].default_output
+	if device~=0 then
 	print("test",API,device)
 	break
+	end
 end
 
 local function setDEV(API_s,device_s)

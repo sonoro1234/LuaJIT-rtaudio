@@ -49,24 +49,26 @@ local LUAFUNCS = ""
 
 cp2c.table_do_sorted(parser.defsT, function(k,v)
 --for k,v in pairs(parser.defsT) do
-	if v[1].argsT[1] then
-		if v[1].argsT[1].type  =="rtaudio_t"  and v[1].funcname~="rtaudio_destroy" then 
+	assert(not v[2],"overloadeing in C?")
+	local fun = v[1]
+	if fun.argsT[1] then
+		if fun.argsT[1].type  =="rtaudio_t"  and fun.funcname~="rtaudio_destroy" then 
 			--print(v[1].funcname,v[1].signature) 
-			local cname = v[1].funcname:gsub("rtaudio_","")
+			local cname = fun.funcname:gsub("rtaudio_","")
 			local code = "\nfunction rtaudio_t:"..cname.."("
 			local codeargs = ""
-			for i=2,#v[1].argsT do
-				codeargs = codeargs..v[1].argsT[i].name..", "
+			for i=2,#fun.argsT do
+				codeargs = codeargs..fun.argsT[i].name..", "
 			end
 			codeargs = codeargs:gsub(", $","") --delete last comma
 			code = code..codeargs..")\n"
-			local retcode = "lib."..v[1].funcname.."(self"
+			local retcode = "lib."..fun.funcname.."(self"
 			if #codeargs==0 then
 				retcode = retcode ..")"
 			else
 				retcode = retcode..","..codeargs..")"
 			end
-			if v[1].ret:match("char") then
+			if fun.ret:match("char") then
 				retcode = "    local ret = "..retcode
 				retcode = retcode.."\n    if ret==nil then return nil else return ffi.string(ret) end"
 			else

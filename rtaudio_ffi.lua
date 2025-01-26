@@ -225,7 +225,6 @@ function M.MakeAudioCallback(func, ...)
 end
 
 function M.GetAllInfo()
-    local I = {}
     local formats = {
         FORMAT_SINT8 = 0x01,
         FORMAT_SINT16 = 0x02,
@@ -248,13 +247,14 @@ function M.GetAllInfo()
     
     local numcompiledapis = M.get_num_compiled_apis()
     local compiledapis = M.compiled_api()
-    I = {APIS={},API={},APIbyNAME={}}
-    for i=0,numcompiledapis-1 do
-        I.APIS[i+1] = ffi.string(M.api_name(compiledapis[i]))
-        I.APIbyNAME[I.APIS[i+1]] = i
+    local I = {APIS={},API={},APIbyNAME={}}
+	local RtAudioInfo = I
+    for i=1,numcompiledapis do
+        I.APIS[i] = ffi.string(M.api_name(compiledapis[i-1]))
+        I.APIbyNAME[I.APIS[i]] = i
     end
-    for i=0,numcompiledapis-1 do
-        local api = compiledapis[i]
+    for i=1,numcompiledapis do
+        local api = compiledapis[i-1]
         local dac = M.create(api)
         local apikey = ffi.string(M.api_name(api))
         I.API[apikey] = {}
@@ -263,29 +263,188 @@ function M.GetAllInfo()
         I.API[apikey].device_count = M.device_count(dac)
         I.API[apikey].devices = {}
         I.API[apikey].devices_by_ID = {}
-        for i=0,M.device_count(dac)-1 do
-            local ID = dac:get_device_id(i)
-            I.API[apikey].devices_by_ID[ID] = i
+        for j=1,M.device_count(dac) do
+            local ID = dac:get_device_id(j-1)
+            I.API[apikey].devices_by_ID[ID] = j
             local info = M.get_device_info(dac,ID)
-            I.API[apikey].devices[i] = {}
-            I.API[apikey].devices[i].id = info.id
-            I.API[apikey].devices[i].name = ffi.string(info.name)
-            I.API[apikey].devices[i].output_channels = info.output_channels
-            I.API[apikey].devices[i].input_channels = info.input_channels
-            I.API[apikey].devices[i].duplex_channels = info.duplex_channels
-            I.API[apikey].devices[i].preferred_sample_rate = info.preferred_sample_rate
-            I.API[apikey].devices[i].is_default_output = info.is_default_output>0
-            I.API[apikey].devices[i].is_default_input = info.is_default_input>0
-            I.API[apikey].devices[i].native_formats = formats_tbl(info.native_formats)
-            I.API[apikey].devices[i].sample_rates = {}
+            I.API[apikey].devices[j] = {}
+            I.API[apikey].devices[j].id = info.id
+            I.API[apikey].devices[j].name = ffi.string(info.name)
+            I.API[apikey].devices[j].output_channels = info.output_channels
+            I.API[apikey].devices[j].input_channels = info.input_channels
+            I.API[apikey].devices[j].duplex_channels = info.duplex_channels
+            I.API[apikey].devices[j].preferred_sample_rate = info.preferred_sample_rate
+            I.API[apikey].devices[j].is_default_output = info.is_default_output>0
+            I.API[apikey].devices[j].is_default_input = info.is_default_input>0
+            I.API[apikey].devices[j].native_formats = formats_tbl(info.native_formats)
+            I.API[apikey].devices[j].sample_rates = {}
             --sample rates
             for k=0,15 do
                 if info.sample_rates[k]==0 then break end
-                I.API[apikey].devices[i].sample_rates[k+1] = info.sample_rates[k]
+                I.API[apikey].devices[j].sample_rates[k+1] = info.sample_rates[k]
             end
         end
         M.destroy(dac)
     end
+	---get output devices
+	local out_devices = {}
+	for i,API in ipairs(RtAudioInfo.APIS) do
+		out_devices[API] = out_devices[API] or {names={},devID={}}
+		for j=1,RtAudioInfo.API[API].device_count do
+			local dev = RtAudioInfo.API[API].devices[j]
+			if dev.output_channels > 0 then
+				table.insert(out_devices[API].names , dev.name)
+				table.insert(out_devices[API].devID , dev.id)
+			end
+		end
+		--no device
+		if #out_devices[API].names == 0 then
+				table.insert(out_devices[API].names , "none")
+				table.insert(out_devices[API].devID , 0)
+		end
+	end
+		---get input devices
+	local input_devices = {}
+	for i,API in ipairs(RtAudioInfo.APIS) do
+		input_devices[API] = input_devices[API] or {names={},devID={}}
+		for j=1,RtAudioInfo.API[API].device_count do
+			local dev = RtAudioInfo.API[API].devices[j]
+			if dev.input_channels > 0 then
+				table.insert(input_devices[API].names , dev.name)
+				table.insert(input_devices[API].devID , dev.id)
+			end
+		end
+		--no device
+		if #input_devices[API].names == 0 then
+				table.insert(input_devices[API].names , "none")
+				table.insert(input_devices[API].devID , 0)
+		end
+	end
+	I.out_devices = out_devices
+	I.input_devices = input_devices
+	--check first good api-default device
+	function I.first_out()
+		local API, device
+		for i=1,#RtAudioInfo.APIS do
+			API = RtAudioInfo.APIS[i]
+			device = RtAudioInfo.API[API].default_output
+			if device~=0 then
+				break
+			end
+		end
+		return API, device
+	end
+	function I.first_input()
+		local API, device
+		for i=1,#RtAudioInfo.APIS do
+			API = RtAudioInfo.APIS[i]
+			device = RtAudioInfo.API[API].default_input
+			if device~=0 then
+				break
+			end
+		end
+		return API, device
+	end
+	function I.out_combos(ig)
+		local DEVCombo = ig.LuaCombo("DEV")
+		local APICombo = ig.LuaCombo("APIS",RtAudioInfo.APIS,function(val,nit)
+			DEVCombo:set(out_devices[val].names) 
+		end)
+		local function Set(API, device)
+			APICombo:set_index(RtAudioInfo.APIbyNAME[API]-1)
+			local device_i = RtAudioInfo.API[API].devices_by_ID[device]
+			DEVCombo:set_index(device_i-1)
+		end
+		local function Get()
+			local API,apiid = APICombo:get()
+			local devs,devid = DEVCombo:get()
+			local device = out_devices[API].devID[devid+1]
+			return API, device
+		end
+		local function draw()
+			APICombo:draw()
+		    DEVCombo:draw()
+		end
+		local function info()
+			local API,device = Get()
+			local devi = I.API[API].devices_by_ID[device]
+			for k,v in pairs(I.API[API].devices[devi]) do
+				if type(v)=="table" then v = table.concat(v,",") end
+				ig.Text(" %s: %s",tostring(k),tostring(v))
+			end
+		end
+		local function OpenPopup(API, device)
+			Set(API, device)
+            ig.OpenPopup"out_dev_set" 
+		end
+		local function DrawPopup(funOK)
+			ig.SetNextWindowContentSize(ig.ImVec2(400,0))
+            if ig.BeginPopupModal"out_dev_set" then
+                draw()
+                info()
+                if ig.Button("OK") then
+                    funOK(Get())
+                    ig.CloseCurrentPopup(); 
+                end
+                ig.SameLine()
+                if ig.Button("cancel") then
+                    ig.CloseCurrentPopup(); 
+                end
+                ig.EndPopup()
+            end
+		end
+		return {DEVCombo=DEVCombo,APICombo=APICombo,Set=Set,Get=Get,draw=draw, info=info, OpenPopup=OpenPopup, DrawPopup=DrawPopup}
+	end
+	function I.input_combos(ig)
+		local DEVCombo = ig.LuaCombo("DEV##in")
+		local APICombo = ig.LuaCombo("APIS##in",RtAudioInfo.APIS,function(val,nit)
+			DEVCombo:set(input_devices[val].names) 
+		end)
+		local function Set(API, device)
+			APICombo:set_index(RtAudioInfo.APIbyNAME[API]-1)
+			local device_i = RtAudioInfo.API[API].devices_by_ID[device]
+			DEVCombo:set_index(device_i-1)
+		end
+		local function Get()
+			local API,apiid = APICombo:get()
+			local devs,devid = DEVCombo:get()
+			local device = input_devices[API].devID[devid+1]
+			return API, device
+		end
+		local function draw()
+			APICombo:draw()
+		    DEVCombo:draw()
+		end
+		local function info()
+			local API,device = Get()
+			local devi = I.API[API].devices_by_ID[device]
+			for k,v in pairs(I.API[API].devices[devi]) do
+				if type(v)=="table" then v = table.concat(v,",") end
+				ig.Text(" %s: %s",tostring(k),tostring(v))
+			end
+		end
+		local function OpenPopup(API, device)
+			Set(API, device)
+            ig.OpenPopup"input_dev_set" 
+		end
+		local function DrawPopup(funOK)
+			ig.SetNextWindowContentSize(ig.ImVec2(400,0))
+            if ig.BeginPopupModal"input_dev_set" then
+                draw()
+                info()
+                if ig.Button("OK") then
+                    funOK(Get())
+                    ig.CloseCurrentPopup(); 
+                end
+                ig.SameLine()
+                if ig.Button("cancel") then
+                    ig.CloseCurrentPopup(); 
+                end
+                ig.EndPopup()
+            end
+		end
+		return {DEVCombo=DEVCombo,APICombo=APICombo,Set=Set,Get=Get,draw=draw, info=info, OpenPopup=OpenPopup, DrawPopup=DrawPopup}
+	end
     return I
 end
 
@@ -299,8 +458,6 @@ __index = function(t,k)
 end
 })
 
--- require"anima.utils"
--- prtable(M.GetAllInfo())
 
 return M
 

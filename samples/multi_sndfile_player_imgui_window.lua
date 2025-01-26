@@ -45,44 +45,12 @@ end
 ------------------------------------------------------------------------
 -----------------------main--------------------------------------
 
-
 local filename = "african_roomS.wav";
 
-RtAudioInfo = rt.GetAllInfo()
+local RtAudioInfo = rt.GetAllInfo()
+local API , device = RtAudioInfo.first_out()
+print("first device",API,device)
 
----get output devices
-local out_devices = {}
-for i,API in ipairs(RtAudioInfo.APIS) do
-    out_devices[API] = out_devices[API] or {names={},ids={},devID={}}
-    for j=0,RtAudioInfo.API[API].device_count-1 do
-        local dev = RtAudioInfo.API[API].devices[j]
-        if dev.output_channels > 0 then
-            table.insert(out_devices[API].names , dev.name)
-            table.insert(out_devices[API].ids , j)
-            table.insert(out_devices[API].devID , dev.id)
-        end
-    end
-	--no device
-	if #out_devices[API].names == 0 then
-            table.insert(out_devices[API].names , "none")
-            table.insert(out_devices[API].ids , -1)
-            table.insert(out_devices[API].devID , 0)
-	end
-end
-
-------------------
-
-local API 
-local device 
---check first good api-default device
-for i=1,#RtAudioInfo.APIS do
-	API = RtAudioInfo.APIS[i]
-	device = RtAudioInfo.API[API].default_output
-	if device~=0 then
-	print("test",API,device)
-	break
-	end
-end
 
 local function setDEV(API_s,device_s)
 	API, device = API_s,device_s
@@ -101,8 +69,8 @@ local function setDEV(API_s,device_s)
         delayfunc,fxdata,delaycdef)
 
     if not audioplayer then print(err);error"not audioplayer" end
-
-	--now in v6 we have deviceID and device_index
+    -- print some info
+    --now in v6 we have deviceID and device_index
     local device_i = RtAudioInfo.API[API].devices_by_ID[device]
     local devinf = RtAudioInfo.API[API].devices[device_i]
     print("---------------opened device",device)
@@ -132,71 +100,20 @@ end
 
 local audioplayer = setDEV(API,device)
 
-
 local igwin = require"imgui.window"
 local win = igwin:SDL(800,400, "audio player")
 --local win = igwin:GLFW(800,400, "audio player")
 local ig = win.ig
 
-------------------- LuaCombo
-local function LuaCombo(label,strs,action)
-    action = action or function() end
-    strs = strs or {"none"}
-    local combo = {}
-    local strings 
-    combo.currItem = ffi.new("int[?]",1)
-    local Items, anchors
-    function combo:set(strs, ini)
-        anchors = {}
-        strings = strs
-        self.currItem[0] = ini or 0
-        Items = ffi.new("const char*[?]",#strs)
-        for i = 0,#strs-1  do
-            anchors[#anchors+1] = ffi.new("const char*",strs[i+1])
-            Items[i] = anchors[#anchors]
-        end
-        action(ffi.string(Items[self.currItem[0]]),self.currItem[0])
-    end
-    function combo:set_index(ind)
-        self.currItem[0] = ind or 0
-        action(ffi.string(Items[self.currItem[0]]),self.currItem[0])
-    end
-    combo:set(strs)
-    function combo:draw()
-        if ig.Combo(label,self.currItem,Items,#strings,-1) then
-            action(ffi.string(Items[self.currItem[0]]),self.currItem[0])
-        end
-    end
-    function combo:get()
-        return ffi.string(Items[self.currItem[0]]),self.currItem[0]
-    end
-    return combo
-end
+local combos = RtAudioInfo.out_combos(ig)
+combos.Set(API, device)
 
-
-local DEVCombo = LuaCombo("DEV")
-local APICombo = LuaCombo("APIS",RtAudioInfo.APIS,function(val,nit)
-    DEVCombo:set(out_devices[val].names) 
-end)
-
-local function SetDevCombos()
-    APICombo:set_index(RtAudioInfo.APIbyNAME[API])
-    local device_i = RtAudioInfo.API[API].devices_by_ID[device]
-    DEVCombo:set_index(device_i)
-end
-
-SetDevCombos()
-
-local function REsetDEV()
-    local API,apiid = APICombo:get()
-    local devs,devid = DEVCombo:get()
-	local device = out_devices[API].devID[devid+1]
+local function REsetDEV(API, device)
 	if device ~= -1 then
 		audioplayer:close()
 		audioplayer = setDEV(API,device)
 	end
 end
-
 
 local streamtime = ffi.new("float[1]")
 local play_text, stop_text = "  > "," || "
@@ -204,25 +121,9 @@ function win:draw()
     
     -- device PopUp
     if ig.Button"device" then
-        SetDevCombos()
-        ig.OpenPopup"dev_set" 
+       combos.OpenPopup(API, device)
     end
-    ig.SetNextWindowContentSize(ig.ImVec2(400,0))
-    if ig.BeginPopupModal"dev_set" then
-        
-        APICombo:draw()
-        DEVCombo:draw()
-        if ig.Button("OK") then
-            REsetDEV()
-            ig.CloseCurrentPopup(); 
-        end
-        ig.SameLine()
-        if ig.Button("cancel") then
-            ig.CloseCurrentPopup(); 
-        end
-        
-        ig.EndPopup()
-    end
+	combos.DrawPopup(REsetDEV)
 
         -------audio gui
     ig.Separator()

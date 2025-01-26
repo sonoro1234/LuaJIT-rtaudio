@@ -17,17 +17,8 @@ else
 end
 ------------ get devices
 local rt = require"rtaudio_ffi"
-RtAudioInfo = rt.GetAllInfo()
-local API 
-local device 
---check first good api-default device
-for i=1,#RtAudioInfo.APIS do
-	API = RtAudioInfo.APIS[i]
-	device = RtAudioInfo.API[API].default_output
-	print("test",API,device)
-		break
-end
-------------------
+local RtAudioInfo = rt.GetAllInfo()
+local API, device = RtAudioInfo.first_out()
 
 print("using",API,"device",device)
 local api = rt.compiled_api_by_name(API)

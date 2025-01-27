@@ -277,6 +277,9 @@ function M.GetAllInfo()
         end
         return {DEVCombo=DEVCombo,APICombo=APICombo,Set=Set,Get=Get,draw=draw, info=info, OpenPopup=OpenPopup, DrawPopup=DrawPopup}
     end
+    function I.dev_name_byID(API, devID)
+       return I.API[API].devices[I.API[API].devices_by_ID[devID]].name
+    end
     return I
 end
 

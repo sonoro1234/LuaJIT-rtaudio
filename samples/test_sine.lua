@@ -41,10 +41,10 @@ local auinf = rt.GetAllInfo()
 local ocombos = auinf.out_combos(ig)
 local oAPI,odevice = auinf.first_out()
 local dac
-local wantedSR = sampleHz
-local wantedBsiz = 512
+local SRcombo, BScombo
 local function set_odev(API,dev)
-	sampleHz = wantedSR
+	sampleHz = tonumber(SRcombo:get_name())
+	local wantedBsiz = tonumber(BScombo:get_name())
 	if API == oAPI and dev == odevice then
 		local keepdac = true
 	end
@@ -82,15 +82,12 @@ local function scandevices()
 	if dac then dac:stop_stream(); dac:close_stream(); dac = nil end
 end
 
-local SRcombo = ig.LuaCombo("SampleRate##in",{"44100","48000"},function(val,nit)
-	wantedSR = tonumber(val) 
-end)
+SRcombo = ig.LuaCombo("SampleRate##in",{"44100","48000"})
 
 local bufsizes = {}
 for i= 6,11 do table.insert(bufsizes, tostring(2^i)) end
-local BScombo = ig.LuaCombo("buffer size##in",bufsizes,function(val,nit)
-	wantedBsiz = tonumber(val) 
-end)
+BScombo = ig.LuaCombo("buffer size##in",bufsizes)
+BScombo:set_name"512"
 
 local counter = 0
 function win:draw(ig)

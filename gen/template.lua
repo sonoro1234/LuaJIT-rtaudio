@@ -117,35 +117,39 @@ function M.GetAllInfo()
     ---get output devices
     local out_devices = {}
     for i,API in ipairs(RtAudioInfo.APIS) do
-        out_devices[API] = out_devices[API] or {names={},devID={}}
+        out_devices[API] = out_devices[API] or {names={},devID={}, ibydevID={}}
         for j=1,RtAudioInfo.API[API].device_count do
             local dev = RtAudioInfo.API[API].devices[j]
             if dev.output_channels > 0 then
                 table.insert(out_devices[API].names , dev.name)
                 table.insert(out_devices[API].devID , dev.id)
+				out_devices[API].ibydevID[dev.id] = #out_devices[API].devID
             end
         end
         --no device
         if #out_devices[API].names == 0 then
                 table.insert(out_devices[API].names , "none")
                 table.insert(out_devices[API].devID , 0)
+				out_devices[API].ibydevID[0] = #out_devices[API].devID
         end
     end
         ---get input devices
     local input_devices = {}
     for i,API in ipairs(RtAudioInfo.APIS) do
-        input_devices[API] = input_devices[API] or {names={},devID={}}
+        input_devices[API] = input_devices[API] or {names={},devID={}, ibydevID={}}
         for j=1,RtAudioInfo.API[API].device_count do
             local dev = RtAudioInfo.API[API].devices[j]
             if dev.input_channels > 0 then
                 table.insert(input_devices[API].names , dev.name)
                 table.insert(input_devices[API].devID , dev.id)
+				input_devices[API].ibydevID[dev.id] = #input_devices[API].devID
             end
         end
         --no device
         if #input_devices[API].names == 0 then
                 table.insert(input_devices[API].names , "none")
                 table.insert(input_devices[API].devID , 0)
+				input_devices[API].ibydevID[0] = #input_devices[API].devID
         end
     end
     I.out_devices = out_devices
@@ -179,14 +183,14 @@ function M.GetAllInfo()
             DEVCombo:set(out_devices[val].names) 
         end)
         local function Set(API, device)
-            APICombo:set_index(RtAudioInfo.APIbyNAME[API]-1)
-            local device_i = RtAudioInfo.API[API].devices_by_ID[device]
-            DEVCombo:set_index(device_i and device_i-1 or 0)
+            APICombo:set_index(RtAudioInfo.APIbyNAME[API])
+			local device_i = out_devices[API].ibydevID[device]
+            DEVCombo:set_index(device_i)
         end
         local function Get()
             local API,apiid = APICombo:get()
             local devs,devid = DEVCombo:get()
-            local device = out_devices[API].devID[devid+1]
+            local device = out_devices[API].devID[devid]
             return API, device
         end
         local function draw()
@@ -231,14 +235,14 @@ function M.GetAllInfo()
             DEVCombo:set(input_devices[val].names) 
         end)
         local function Set(API, device)
-            APICombo:set_index(RtAudioInfo.APIbyNAME[API]-1)
-            local device_i = RtAudioInfo.API[API].devices_by_ID[device]
-            DEVCombo:set_index(device_i and device_i-1 or 0)
+            APICombo:set_index(RtAudioInfo.APIbyNAME[API])
+			local device_i = input_devices[API].ibydevID[device]
+            DEVCombo:set_index(device_i)
         end
         local function Get()
             local API,apiid = APICombo:get()
             local devs,devid = DEVCombo:get()
-            local device = input_devices[API].devID[devid+1]
+            local device = input_devices[API].devID[devid]
             return API, device
         end
         local function draw()
@@ -278,6 +282,7 @@ function M.GetAllInfo()
         return {DEVCombo=DEVCombo,APICombo=APICombo,Set=Set,Get=Get,draw=draw, info=info, OpenPopup=OpenPopup, DrawPopup=DrawPopup}
     end
     function I.dev_name_byID(API, devID)
+       if devID == 0 then return "none" end
        return I.API[API].devices[I.API[API].devices_by_ID[devID]].name
     end
     return I

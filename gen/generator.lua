@@ -18,13 +18,10 @@ for i,it in ipairs(parser.itemsarr) do
 	table.insert(cdefs,it.item)
 end
 
---require"anima.utils"
---prtable(parser.itemsarr)
-
 local deftab = {}
 
 local ffi = require"ffi"
---ffi.cdef(table.concat(cdefs,""))
+ffi.cdef(table.concat(cdefs,""))
 local wanted_strings = {"."}--"^SDL","^AUDIO_","^KMOD_","^RW_"}
 for i,v in ipairs(defines) do
 	local wanted = false
